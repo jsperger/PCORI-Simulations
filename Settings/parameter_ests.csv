@@ -1,0 +1,12 @@
+Parameter,Coefficient
+Intercept, 3
+Dwell_time,-0.4
+Music,-1.2
+Visualization,-0.8
+Squeeze,-1.5
+Dwell_x_music,0.2
+Dwell_x_viz,0.2
+Dwell_x_squeeze,0.2
+Music_x_viz,0.5
+Music_x_squeeze,0.5
+Viz_x_squeeze,0.5
