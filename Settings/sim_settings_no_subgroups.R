@@ -7,8 +7,22 @@
 # If true, saves the data for each simulation into a CSV
 save.data.files <- FALSE
 
-sim.reps <- 1
+# Number of simulation runs
+sim.reps <- 1500
 
+# Number of uniform (-1,1) covariates
+p.unif <- 1
+
+# Number of standard normal covariates
+p.norm <- 1
+
+# Number of binary covariates
+# Not currently used except to check against the length of bin.props
+p.bin <- 2
+
+# Must have length equal to the number of binary covariates
+# First is gender - I think about 75% men 25% women
+bin.props <- c(.25, .5)
 #################################################
 #### Study Design Settings
 #################################################

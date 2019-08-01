@@ -3,17 +3,42 @@
 #################################################
 require(nlme)
 require(geepack)
+#library(DynTxRegime)
+#library(multcomp)
 
 ###########################################################
-### Fit Model
+### Mixed Model
 ###########################################################
 
-m1 <- gls(Obsij ~ (Dwell + Music + Viz + Squeeze)^2, data = observed.data, 
-          correlation = corCompSymm(form = ~ 1 | ID),
-          na.action = na.omit)
+FitMixedModel <- function(observed.data, model.form = formula(Obsij ~ (Dwell + Music + Viz + Squeeze)^2)){
+  mixed.fit <- gls(model = model.form, data = observed.data, 
+                   correlation = corCompSymm(form = ~ 1 | ID),
+                   na.action = na.omit)
+  #Exclude intercept p-vals
+  mixed.pvals <- summary(mixed.fit)$tTable[-1,4]
+  return(mixed.pvals)
+}
 
-m3 <- geeglm(Obsij ~ (Dwell + Music + Viz + Squeeze)^2, id=ID, data = observed.data, 
-          corstr = "exchangeable", na.action="na.omit")
 ###########################################################
-### Calculate p-values of interest
+### GEE
 ###########################################################
+FitGEEModel <- function(observed.data, model.form = formula(Obsij ~ (Dwell + Music + Viz + Squeeze)^2)){
+  gee.fit <- geeglm(formula = model.form, id=ID, data = observed.data, 
+                    corstr = "exchangeable", na.action="na.omit")
+  #Exclude intercept pvals
+  gee.pvals <- summary(gee.fit)$coefficients[-1,4]
+  return(gee.pvals)
+}
+
+###########################################################
+### Extract p-values of interest
+###########################################################
+
+#K <- diag(length(coef(m1)))[-1,]
+#rownames(K) <- names(coef(m1))[-1]
+#test1 <-glht(m1, linfct=K)
+
+
+
+
+#gee.adjusted.pvals <- gee.pvals*10
