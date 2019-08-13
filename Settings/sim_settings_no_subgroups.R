@@ -7,22 +7,16 @@
 # If true, saves the data for each simulation into a CSV
 save.data.files <- FALSE
 
+seed <- 42
+
 # Number of simulation runs
-sim.reps <- 1500
+sim.reps <- 2000
 
-# Number of uniform (-1,1) covariates
-p.unif <- 1
+# Used as part of the name for creating the results directory
+# Directory is Run-type Date Time
+settings.type <- "no-subgroups"
 
-# Number of standard normal covariates
-p.norm <- 1
 
-# Number of binary covariates
-# Not currently used except to check against the length of bin.props
-p.bin <- 2
-
-# Must have length equal to the number of binary covariates
-# First is gender - I think about 75% men 25% women
-bin.props <- c(.25, .5)
 #################################################
 #### Study Design Settings
 #################################################
@@ -32,7 +26,7 @@ N <- 3000
 
 # Visit proportions
 # 1 Visit, 2 visits, 3 visits, 4 visits
-visit.proportions <- c(.6, .05, .1, .25)
+visit.proportions <- c(.6, .1, .1, .2)
 
 category.numbers <- N * visit.proportions
 nobs.to.sample <- c(rep(1, times = category.numbers[1]),
@@ -46,12 +40,26 @@ first.batch <- 1500
 # Subsequent batch sizes
 batch.increment <- 500
 
+# Number of uniform (-1,1) covariates
+k.unif <- 1
+
+# Number of standard normal covariates
+k.norm <- 1
+
+# Number of binary covariates
+# Not currently used except to check against the length of bin.props
+k.bin <- 2
+
+# Must have length equal to the number of binary covariates
+# First is gender - I think about 75% men 25% women
+bin.props <- c(.25, .5)
+
 #################################################
 #### Randomization Settings
 #################################################
 # Random Assignment method
 # Options: "simple", "block", "trajectory"
- randomization.method <- "trajectory"
+ randomization.method <- "ttts"
  # Set the block size when use block randomization
  block.size <-4
  # Flag that determines whether subjects who will have four visits will be randomized separately
@@ -63,15 +71,28 @@ batch.increment <- 500
  trt.probs.for.non.traj <- c(.08, .05, .05, .05, .05, .12, .12, .12, .12, .12, .12)
  # randomize.to.trajectory <- FALSE
 
+ # Tuning parameter for Top-two Thompson Sampling
+ # Probability that the best result from TS is used
+ # Second best is used with probability 1-pi.param
+ pi.param <- .6
+ 
  #################################################
  #### Treatment Effect Model Settings
  #################################################
 # Treatment effects
+#param.df <- read.csv("./Settings/null_parameters.csv")
 param.df <- read.csv("./Settings/parameter_ests.csv")
+ 
 trt.design <- read.csv("./Settings/treatment_design_matrix.csv", header=TRUE)
 trt.names <- trt.design$X
 trt.design <- data.matrix(trt.design[,-1])
 rownames(trt.design) <- trt.names
+
+#One sided formula because it's used to generate the outcome data
+true.model.formula <- formula(~ 1 + (Dwell + Music + Viz + Squeeze)^2)
+# Formula used for the working model for the TS fits
+#working.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
+working.model.formula <- "Obsij ~ (1|ID) + (Dwell + Music + Viz + Squeeze)^2"
 
 trt.effects <- trt.design %*% param.df$Coefficient
 
