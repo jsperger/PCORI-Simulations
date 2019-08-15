@@ -36,7 +36,7 @@ GenBinaryCovariates <- function(n.subj = N, d.bin = k.bin, props = .5){
   # props determines what proportion of the subjects have a value of 1
   X <- props %>% map_dfc(rbinom, n = n.subj, size = 1)
   names(X) <- paste0("B", 1:d.bin)
-  
+  X$ID <- 1:n.subj
   return(X)
 }
 
@@ -223,13 +223,29 @@ TTTSRandomize <- function(study.data, first.batch, batch.increment, working.mode
   return(observed.data)
 }
 #################################################
-#### Generate Potential Outcomes
+#### Generate Potential and Realized Outcomes
 #################################################
-GenOutcomes <- function(study.data, true.model.formula, true.params){
+GenOutcomes <- function(study.data, true.model.formula, true.params, oos.flag = FALSE){
   model.X <- model.matrix(true.model.formula, data=study.data)
-  # Calculate the treatment effects
+  
+  # Check that the design matrix and the parameter names match
+  if(all(colnames(model.X) == names(true.params)) == FALSE){
+    warning("Model formula variable names do not match parameter names")
+  }
+  
+  # Calculate the outcome with no noise
   study.data$TEij <- c(model.X %*% true.params)
-  # TODO: Add error checking of the names in true params against the column names of model.X
+  
+  if(oos.flag == TRUE){
+    # No noise for the out of sample data
+    random.ints <- tibble(ID = 1:max(study.data$ID), 
+                          Ui = rnorm(n = length(unique(study.data$ID)), mean = 0, sd = 1.4))
+    study.data <- inner_join(study.data, random.ints, by = "ID")
+    study.data$Normij <- study.data$TEij + study.data$Ui
+    #study.data$Normij <- study.data$TEij
+    study.data$Obsij <- cut(study.data$Normij, breaks = ordinal.breaks, labels=FALSE) -1
+    return(study.data)
+  }
   # Generate the observed outcome
   study.data$Yij <- study.data$TEij + study.data$Ui + study.data$Errij
   CalcObsij <- function(in.obs){
@@ -280,7 +296,10 @@ GenOutcomes <- function(study.data, true.model.formula, true.params){
 #################################################
 
 GenerateStudyData <- function(N, nobs.to.sample, sigma.intercept, sigma.noise, randomization.method,
-                              trt.effects, block.size, trt.probs.for.non.traj,ordinal.breaks, ...){
+                              block.size, trt.probs.for.non.traj,ordinal.breaks,
+                              k.unif, k.norm,
+                              k.bin, bin.props,
+                              true.model.formula, true.params, working.model.formula, ...){
   # Create tibble for study data
   # We will generate data for four visits for every subject but for many subjects the visits after the first 
   # are considered missing
@@ -305,6 +324,15 @@ GenerateStudyData <- function(N, nobs.to.sample, sigma.intercept, sigma.noise, r
   #################################################
   #### Generate Covariates
   #################################################
+  
+  study.data <- inner_join(study.data, 
+                           GenContinuousCovariates(n.subj = N, d.unif = k.unif, d.norm = k.norm), 
+                           by = "ID")
+  
+  study.data <- inner_join(study.data, 
+                           GenBinaryCovariates(n.subj = N, d.bin = k.bin, props = bin.props), 
+                           by = "ID")
+  
   
   #################################################
   #### Assign Treatments
@@ -350,80 +378,22 @@ GenerateStudyData <- function(N, nobs.to.sample, sigma.intercept, sigma.noise, r
                                 working.model.formula = working.model.formula, pi.param = pi.param)
   } else{
     study.data <- bind_cols(study.data, GenTreatmentIndicators(study.data))
-    
-    # Calculate the treatment effects based on the treatment assignment
-    study.data$TEij <- NA
-    for(i in 1:nrow(study.data)){
-      study.data$TEij[i] <- trt.effects[study.data$Treatment[i]]
-    }
-    
-    # Generate the outcomes
-    study.data$Yij <- study.data$TEij + study.data$Ui + study.data$Errij
-    
-    CalcObsij <- function(in.obs){
-      in.obs <- as.data.frame(t(in.obs))
-      if(in.obs$Nobs == 4){
-        obsij <- in.obs$Yij
-      }
-      
-      if(in.obs$Nobs == 3){
-        if(in.obs$Visit <= 3){
-          obsij <- in.obs$Yij
-        } else{
-          obsij <- NA
-        }
-      }
-      if(in.obs$Nobs == 2){
-        if(in.obs$Visit <= 2){
-          obsij <- in.obs$Yij
-        } else{
-          obsij <- NA
-        }
-      }
-      
-      if(in.obs$Nobs == 1){
-        if(in.obs$Visit == 1){
-          obsij <- in.obs$Yij
-        } else{
-          obsij <- NA
-        }
-      }
-      
-      return(obsij)
-    }
-    
-    # Generate normal outcome
-    study.data$ObsNormij <- apply(study.data, 1, CalcObsij)
-    
-    # Generate ordinal outcome
-    # breaks are defined in the settings file
-    # Subtract 1 because the R default begins numbering at 1
-    study.data$Obsij <- cut(study.data$ObsNormij, breaks = ordinal.breaks, labels=FALSE) -1
+    study.data <- GenOutcomes(study.data = study.data, 
+                              true.model.formula = true.model.formula, 
+                              true.params = true.params)
   }
-  
-  #study.data$Dwell <- ifelse(study.data$Treatment %in% c(2,6, 7, 8), 1, 0)
-  #study.data$Music <- ifelse(study.data$Treatment %in% c(3,6, 9, 10), 1, 0)
-  #study.data$Viz <- ifelse(study.data$Treatment %in% c(4,7, 9, 11), 1, 0)
-  #study.data$Squeeze <- ifelse(study.data$Treatment %in% c(5,8, 10, 11), 1, 0)
   #################################################
-  #### Generate Potential Outcomes
+  #### Export data
   #################################################
   
+  #TODO: Add the ability to write study data to a file 
   
-  #################################################
-  #### Generate Observed Outcomes
-  #################################################
- 
   
   # Subset to include only observed data
+  # TODO: Someday dump all the data for comparing missing data methods
   # The arranging is necessary for geepack to work correctly downstream
   observed.data <- study.data %>% filter(!is.na(Obsij)) %>% arrange(ID)
   
   return(observed.data)
 }
 
-#################################################
-#### Export data
-#################################################
-
-#TODO: Add data exporting

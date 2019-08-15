@@ -1,32 +1,31 @@
 #################################################
 #### Run a simulation
 #################################################
-
+settings.path <- "./Settings/sim_settings_sg2.R"
 # load settings
-source("./Settings/sim_settings_no_subgroups.R")
+source(settings.path)
 source("./GenerateStudyData.R")
 source("./AnalyzeStudyData.R")
 
 set.seed(seed)
-cur.time <- Sys.time()
+cur.time <- gsub(":", "_", x=Sys.time() ,fixed=TRUE)
 
-# Create the containers for where p-values and treatment assignments 
-# from the simulation runs will be stored
-mixed.model.pvals.unadj <- matrix(nrow = sim.reps, ncol = 10)
-colnames(mixed.model.pvals.unadj) <- trt.names[-1]
-gee.pvals.unadj <- matrix(nrow = sim.reps, ncol = 10)
-colnames(gee.pvals.unadj) <- trt.names[-1]
+if(test.hypotheses.flag == TRUE){
+  # Create the containers for where p-values and treatment assignments 
+  # from the simulation runs will be stored
+  mixed.model.pvals.unadj <- matrix(nrow = sim.reps, ncol = 10)
+  #colnames(mixed.model.pvals.unadj) <- names(true.params)
+  # TODO: Decide what to do with the naming schemes esp. for the subgroup cases
+  gee.pvals.unadj <- matrix(nrow = sim.reps, ncol = 10)
+  #colnames(gee.pvals.unadj) <- trt.names[-1]
+  
+}
 
-treatment.assignments <- matrix(nrow = sim.reps, ncol = 11)
-# Create the contrast matrix for the hypothesis tests
-# Note: not actually a contrast matrix
-# Each row is tested separately, not a joint hypothesis
-temp.study <- tibble(Treatment = 1:11)
-temp.study <- bind_cols(temp.study, GenTreatmentIndicators(temp.study))
-treat.mat <- model.frame(true.model.formula, data = temp.study)
-contrast.mat <- model.matrix(true.model.formula, treat.mat)[-1,]
-contrast.mat[,1] <- 0
-rm(temp.study, treat.mat)
+treatment.assignments <- matrix(nrow = sim.reps, ncol = trt.table.cols)
+percentage.best.treatment <- vector(length = sim.reps)
+percentage.of.oracle.value <- matrix(nrow = sim.reps, ncol = 5)
+colnames(percentage.of.oracle.value) <- c("PercOracleORD", "MSE-Norm", "MSE-SoC", "PerImpOverTO", "MissclassPerc")
+start.time <- Sys.time()
 
 #################################################
 #### Run the Simulation
@@ -36,34 +35,74 @@ for(i in 1:sim.reps){
                                           randomization.method=randomization.method, 
                                           sigma.intercept=sigma.intercept, sigma.noise = sigma.noise,
                                           block.size=block.size, trt.probs.for.non.traj=trt.probs.for.non.traj,
-                                          trt.effects=trt.effects, ordinal.breaks = ordinal.breaks)
-  mixed.model.pvals.unadj[i,] <- CalcMMPval(FitMixedModel(current.study.data), contrast.mat)
-  treatment.assignments[i,] <- table(current.study.data$Treatment)
-  gee.pvals.unadj[i,] <- CalcGEEPval(FitGEEModel(current.study.data), contrast.mat)
+                                          ordinal.breaks = ordinal.breaks,
+                                          k.unif=k.unif, k.norm=k.norm,
+                                          k.bin=k.bin, bin.props=bin.props,
+                                          true.model.formula = true.model.formula, true.params, working.model.formula)
+# Generate out of sample data for evaluating model performance
+  oos.data <- GenerateOOSData(Noos = Noos, k.unif, k.norm, k.bin, bin.props,
+                              true.model.formula, true.params)
+  gee.mod <- FitGEEModel(current.study.data, model.form = gee.model.formula)
+  # Fit a treatment indicators only model for comparison
+  trt.only.mod <- FitGEEModel(current.study.data, 
+                              model.form = formula(Obsij ~ (Dwell + Music + Viz + Squeeze)^2))
+  percentage.of.oracle.value[i,] <- CalcOOSValue(oos.data, working.model= gee.mod, 
+                                                 trt.only.model= trt.only.mod,
+                                                 model.formula = gee.model.formula)
+  percentage.best.treatment[i] <- CalcISBestTreatment(current.study.data,
+                                                      true.model.formula,
+                                                      true.params)
+  treatment.assignments[i,] <- eval(table.call)
+  # Different setups have different assignments of interest
+  # With subtypes we're interested in the allocation by important subtype
+  if(test.hypotheses.flag == TRUE){
+    mixed.model.pvals.unadj[i,] <- CalcMMPval(FitMixedModel(current.study.data, working.model.formula), contrast.mat)
+    gee.pvals.unadj[i,] <- CalcGEEPval(gee.mod, contrast.mat)
+    
+  }
 }
 
 #Bonferroni correction
-adjusted.mm.pvals <- mixed.model.pvals.unadj*10
-adjusted.gee.pvals <- gee.pvals.unadj*10
+#adjusted.mm.pvals <- mixed.model.pvals.unadj*10
+#adjusted.gee.pvals <- gee.pvals.unadj*10
 
+end.time <- Sys.time()
 #################################################
 #### Write out simulation results
 #################################################
-path.name <- paste0(getwd(), "/Results/",settings.type,"-", cur.time)
-# Create the results path
-dir.create(path.name)
-
-# Write out the settings file used
-fileConn <- file(paste0(path.name,"/settings.txt"))
-settings.file <- readLines("./Settings/sim_settings_no_subgroups.R")
-writeLines(settings.file, fileConn)
-close(fileConn)
-
-# Write out the p-values
-write.csv(gee.pvals.unadj, file = paste0(path.name, "/unadjusted-gee-pvals.csv"), 
-          row.names = FALSE)
-write.csv(mixed.model.pvals.unadj, file = paste0(path.name, "/unadjusted-mm-pvals.csv"), 
-          row.names = FALSE)
-# Write out the treatment assignment summary
-write.csv(treatment.assignments, file = paste0(path.name, "/treatment-assignment-summary.csv"), 
-          row.names = FALSE)
+if(save.results == TRUE){
+  path.name <- paste0(getwd(), "/Results/",settings.type,"-", cur.time)
+  # Create the results path
+  dir.create(path.name)
+  
+  
+  # Write out the parameters file used
+  write.csv(param.df, file = paste0(path.name, "/parameter_values.csv"), 
+            row.names = FALSE)
+  
+  if(test.hypotheses.flag == TRUE){
+  # only write out the p-values if we did hypothesis tests
+  # Write out the p-values
+  write.csv(gee.pvals.unadj, file = paste0(path.name, "/unadjusted-gee-pvals.csv"), 
+            row.names = FALSE)
+  write.csv(mixed.model.pvals.unadj, file = paste0(path.name, "/unadjusted-mm-pvals.csv"), 
+            row.names = FALSE)
+  }
+  # Write out the treatment assignment summary
+  write.csv(treatment.assignments, file = paste0(path.name, "/treatment-assignment-summary.csv"), 
+            row.names = FALSE)
+  write.csv(percentage.best.treatment, file = paste0(path.name, "/percentage-best-treatment.csv"))
+  # Write out the percentage of oracle value matrix
+  write.csv(percentage.of.oracle.value, file = paste0(path.name, "/perc-oracle.csv"), 
+            row.names = FALSE)
+  
+  
+  # Write out the settings file used
+  fileConn <- file(paste0(path.name,"/settings.txt"))
+  settings.file <- c(readLines(settings.path),
+                     paste("#Run time:", end.time-start.time))
+  
+  writeLines(settings.file, fileConn)
+  close(fileConn)
+  
+}

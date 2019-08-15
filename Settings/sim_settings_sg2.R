@@ -5,18 +5,18 @@
 ####### Simulation Settings
 # Save intermediate simulation run data files
 # If true, saves the data for each simulation into a CSV
-save.intermediate.data.files <- FALSE
+save.data.files <- FALSE
 # Save final simulation result summaries - includes pvals, treatment allocation summary, and settings files
-save.results <- FALSE
 
+save.results <- TRUE
+#seed <- 1213
 seed <- 42
-
 # Number of simulation runs
-sim.reps <- 2000
+sim.reps <- 100
 
 # Used as part of the name for creating the results directory
 # Directory is Run-type Date Time
-settings.type <- "no-subgroups-fr"
+settings.type <- "sg2-fr"
 
 
 #################################################
@@ -28,7 +28,7 @@ N <- 3000
 
 # Visit proportions
 # 1 Visit, 2 visits, 3 visits, 4 visits
-visit.proportions <- c(.6, .1, .1, .2)
+visit.proportions <- c(.625, .125, .1, .15)
 
 category.numbers <- N * visit.proportions
 nobs.to.sample <- c(rep(1, times = category.numbers[1]),
@@ -50,64 +50,93 @@ k.norm <- 1
 
 # Number of binary covariates
 # Not currently used except to check against the length of bin.props
-k.bin <- 2
+k.bin <- 3
 
 # Must have length equal to the number of binary covariates
 # First is gender - I think about 75% men 25% women
-bin.props <- c(.25, .5)
+bin.props <- c(.25, .4, .3)
 
 #################################################
 #### Randomization Settings
 #################################################
 # Random Assignment method
-# Options: "simple", "block", "trajectory"
- randomization.method <- "ttts"
- # Set the block size when use block randomization
- block.size <-4
- # Flag that determines whether subjects who will have four visits will be randomized separately
- # It will be known at enrollment whether a subject will be expected to return four times during the study
- # If TRUE, subjects who return four times will be randomized to a trajectory where a trajectory is defined as
- # Soc, Treatment A, Treatment B, Treatment A&B in a random order
- # To facilitate within subject comparisons when possible
- 
- trt.probs.for.non.traj <- c(.08, .05, .05, .05, .05, .12, .12, .12, .12, .12, .12)
- # randomize.to.trajectory <- FALSE
+# Options: "simple", "block", "trajectory", "ttts"
+randomization.method <- "trajectory"
+# Set the block size when use block randomization
+block.size <-4
+# Flag that determines whether subjects who will have four visits will be randomized separately
+# It will be known at enrollment whether a subject will be expected to return four times during the study
+# If TRUE, subjects who return four times will be randomized to a trajectory where a trajectory is defined as
+# Soc, Treatment A, Treatment B, Treatment A&B in a random order
+# To facilitate within subject comparisons when possible
 
- # Tuning parameter for Top-two Thompson Sampling
- # Probability that the best result from TS is used
- # Second best is used with probability 1-pi.param
- pi.param <- .6
- 
- #################################################
- #### Treatment Effect Model Settings
- #################################################
+trt.probs.for.non.traj <- c(.08, .05, .05, .05, .05, .12, .12, .12, .12, .12, .12)
+# randomize.to.trajectory <- FALSE
+
+# Tuning parameter for Top-two Thompson Sampling
+# Probability that the best result from TS is used
+# Second best is used with probability 1-pi.param
+pi.param <- .6
+
+#################################################
+#### Treatment Effect Model Settings
+#################################################
 # Treatment effects
 #param.df <- read.csv("./Settings/null_parameters.csv")
-param.df <- read.csv("./Settings/parameter_ests.csv")
+param.df <- read.csv("./Settings/parameters_sg2.csv")
 true.params <- param.df$Coefficient
 names(true.params) <- param.df$Parameter
 
+
 #One sided formula because it's used to generate the outcome data
-true.model.formula <- formula(~ 1 + (Dwell + Music + Viz + Squeeze)^2)
+true.model.formula <- formula(~ 1 + N1 + U1 +
+                                (Dwell + Music + Viz + Squeeze)^2 + 
+                                B1 * (Dwell + Viz ) +
+                                B2 * (Squeeze + Dwell)+
+                                U1 * Viz +
+                                U1 * Squeeze+
+                                B3 * Music)
+
+#term.labels <- attr(terms(true.model.formula), "term.labels")
+#write.csv(term.labels, file = "./Settings/parameters_sg2.csv", row.names=FALSE)
+
 # Formula used for the working model for the TS fits
 #working.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
-working.model.formula <- "Obsij ~ (1|ID) + (Dwell + Music + Viz + Squeeze)^2"
+# Formula is used for 
+# Note this is a character vector not an actual formula
+working.model.formula <- "Obsij ~ (1|ID) +  N1 + U1 +
+                               (Dwell + Music + Viz + Squeeze)^2 + B1*(Dwell + Music + Viz + Squeeze) +
+B2*(Dwell + Music + Viz + Squeeze) + B3*(Dwell + Music + Viz + Squeeze) +
+U1*(Dwell + Music + Viz + Squeeze)"
+gee.model.formula <- formula(Obsij ~ 1 + N1 + U1 + (Dwell + Music + Viz + Squeeze)^2 + 
+                               B1*(Dwell + Music + Viz + Squeeze) +
+                               B2*(Dwell + Music + Viz + Squeeze) +
+                               B3*(Dwell + Music + Viz + Squeeze) +
+                               U1*(Dwell + Music + Viz + Squeeze))
+#trt.effects <- trt.design %*% param.df$Coefficient
 
 # Noise parameters
 # Standard deviation for the random intercepts
-sigma.intercept <- 1
+sigma.intercept <- 1.4
 
 # Standard deviation of the within-subject (residual) variance component
-sigma.noise <- 1
+sigma.noise <- 1.4
 
 # Ordinal cutpoints
+# Not evenly spaced towards the top of the scale otherwise we wouldn't observe any 9s or 10s
+# Which we actually see reported in the literature
 ordinal.breaks <- c(-Inf, 0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, Inf)
 
 #################################################
 #### Hypothesis Test Setup
 #################################################
-test.hypotheses.flag <- TRUE
+test.hypotheses.flag <- FALSE
 if(test.hypotheses.flag == TRUE){
+  
+
+# Create the contrast matrix for the hypothesis tests
+# Note: not actually a contrast matrix
+# Each row is tested separately, not a joint hypothesis
 GenTreatmentIndicators <- function(study.data){
   # Generate treatment indicators - 1 if a treatment was received (either by itself or in combination) 0 else
   
@@ -118,14 +147,11 @@ GenTreatmentIndicators <- function(study.data){
   return(treat.indicators)
   
 }
-# Create the contrast matrix for the hypothesis tests
-# Note: not actually a contrast matrix
-# Each row is tested separately, not a joint hypothesis
-temp.study <- tibble(Treatment = 1:11)
+temp.study <- tibble(Treatment = rep(1:11, 2), B1 = c(rep(0,11), rep(1,11)), N1 = 1)
 temp.study <- bind_cols(temp.study, GenTreatmentIndicators(temp.study))
 treat.mat <- model.frame(true.model.formula, data = temp.study)
-contrast.mat <- model.matrix(true.model.formula, treat.mat)[-1,]
-contrast.mat[,1] <- 0
+contrast.mat <- model.matrix(true.model.formula, treat.mat)[2:11,]
+contrast.mat[,1:2] <- 0
 rm(temp.study, treat.mat)
 }
 
@@ -133,9 +159,13 @@ rm(temp.study, treat.mat)
 #### Treatment Assignment Table Setup
 #################################################
 
-trt.table.cols <- 11
-table.call <- expr(table(current.study.data$Treatment))
 
+# Function used to create a vector with the treatment assignments of interest
+# 
+table.call <- expr(c(ftable(Treatment ~ B1 + B2 + I(U1 > 0), data = current.study.data)))
+
+
+trt.table.cols <- 88
 
 #################################################
 #### Out of Sample Comparisons
