@@ -2,23 +2,36 @@
 #### Simulation Settings
 #################################################
 
+require(tidyverse)
+
 ####### Simulation Settings
 # Save intermediate simulation run data files
 # If true, saves the data for each simulation into a CSV
 save.intermediate.data.files <- FALSE
 # Save final simulation result summaries - includes pvals, treatment allocation summary, and settings files
-save.results <- FALSE
+save.results <- TRUE
 
-seed <- 42
+seed <- 1011
 
 # Number of simulation runs
-sim.reps <- 2000
+sim.reps <- 1000
 
 # Used as part of the name for creating the results directory
 # Directory is Run-type Date Time
-settings.type <- "no-subgroups-fr"
+settings.type <- "nsg-ts"
 
+# Whether hypothesis tests should be conducted
+# Should only be set to TRUE if there are no subgroups
+test.hypotheses.flag <- TRUE
 
+# Whether percentage of oracle value and other out of sample comparison metrics should be calculated
+# Should be set to TRUE when there are subgroups
+calc.oos.metrics.flag <- FALSE
+
+# Whether the percentage of patients in-sample who received the best treatment 
+# for them should be calculated
+# 
+calc.percentage.best.treat.flag <- TRUE
 #################################################
 #### Study Design Settings
 #################################################
@@ -60,7 +73,7 @@ bin.props <- c(.25, .5)
 #### Randomization Settings
 #################################################
 # Random Assignment method
-# Options: "simple", "block", "trajectory"
+# Options: "simple", "block", "trajectory", "ttts"
  randomization.method <- "ttts"
  # Set the block size when use block randomization
  block.size <-4
@@ -92,6 +105,7 @@ true.model.formula <- formula(~ 1 + (Dwell + Music + Viz + Squeeze)^2)
 # Formula used for the working model for the TS fits
 #working.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
 working.model.formula <- "Obsij ~ (1|ID) + (Dwell + Music + Viz + Squeeze)^2"
+gee.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
 
 # Noise parameters
 # Standard deviation for the random intercepts
@@ -106,7 +120,6 @@ ordinal.breaks <- c(-Inf, 0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, Inf)
 #################################################
 #### Hypothesis Test Setup
 #################################################
-test.hypotheses.flag <- TRUE
 if(test.hypotheses.flag == TRUE){
 GenTreatmentIndicators <- function(study.data){
   # Generate treatment indicators - 1 if a treatment was received (either by itself or in combination) 0 else
@@ -126,6 +139,11 @@ temp.study <- bind_cols(temp.study, GenTreatmentIndicators(temp.study))
 treat.mat <- model.frame(true.model.formula, data = temp.study)
 contrast.mat <- model.matrix(true.model.formula, treat.mat)[-1,]
 contrast.mat[,1] <- 0
+
+# alternative contrasts - test every coefficient except intercept
+#contrast.mat <- diag(11)
+#contrast.mat <- contrast.mat[2:11,]
+
 rm(temp.study, treat.mat)
 }
 

@@ -5,32 +5,31 @@
 ####### Simulation Settings
 # Save intermediate simulation run data files
 # If true, saves the data for each simulation into a CSV
-save.data.files <- FALSE
+save.intermediate.data.files <- FALSE
 # Save final simulation result summaries - includes pvals, treatment allocation summary, and settings files
+save.results <- FALSE
 
-save.results <- TRUE
-seed <- 519
+seed <- 101
 
 # Number of simulation runs
-sim.reps <- 1000
+sim.reps <- 100
 
 # Used as part of the name for creating the results directory
 # Directory is Run-type Date Time
-settings.type <- "sg3-fr"
-
+settings.type <- "null-ts"
 
 # Whether hypothesis tests should be conducted
 # Should only be set to TRUE if there are no subgroups
-test.hypotheses.flag <- FALSE
+test.hypotheses.flag <- TRUE
 
 # Whether percentage of oracle value and other out of sample comparison metrics should be calculated
 # Should be set to TRUE when there are subgroups
-calc.oos.metrics.flag <- TRUE
+calc.oos.metrics.flag <- FALSE
 
 # Whether the percentage of patients in-sample who received the best treatment 
 # for them should be calculated
 # 
-calc.percentage.best.treat.flag <- TRUE
+calc.percentage.best.treat.flag <- FALSE
 #################################################
 #### Study Design Settings
 #################################################
@@ -40,7 +39,7 @@ N <- 3000
 
 # Visit proportions
 # 1 Visit, 2 visits, 3 visits, 4 visits
-visit.proportions <- c(.625, .125, .1, .15)
+visit.proportions <- c(.6, .1, .1, .2)
 
 category.numbers <- N * visit.proportions
 nobs.to.sample <- c(rep(1, times = category.numbers[1]),
@@ -66,7 +65,7 @@ k.bin <- 2
 
 # Must have length equal to the number of binary covariates
 # First is gender - I think about 75% men 25% women
-bin.props <- c(.25, .3)
+bin.props <- c(.25, .5)
 
 #################################################
 #### Randomization Settings
@@ -95,33 +94,23 @@ pi.param <- .6
 #################################################
 # Treatment effects
 #param.df <- read.csv("./Settings/null_parameters.csv")
-param.df <- read.csv("./Settings/parameters_sg3.csv")
+param.df <- read.csv("./Settings/null_parameters.csv")
 true.params <- param.df$Coefficient
 names(true.params) <- param.df$Parameter
-#trt.design <- read.csv("./Settings/treatment_design_matrix.csv", header=TRUE)
-#trt.names <- trt.design$X
-#trt.design <- data.matrix(trt.design[,-1])
-#rownames(trt.design) <- trt.names
 
 #One sided formula because it's used to generate the outcome data
-true.model.formula <- formula(~ 1 + N1 + (Dwell + Music + Viz + Squeeze)^2 + 
-                                B1*(Dwell + Music + Viz + Squeeze)+
-                                B2*(Dwell + Music + Viz + Squeeze))
+true.model.formula <- formula(~ 1 + (Dwell + Music + Viz + Squeeze)^2)
 # Formula used for the working model for the TS fits
 #working.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
-working.model.formula <- "Obsij ~ (1|ID) + N1 + (Dwell + Music + Viz + Squeeze)^2 + 
-B1*(Dwell + Music + Viz + Squeeze) + B2*(Dwell + Music + Viz + Squeeze)"
-gee.model.formula <- formula(Obsij~ 1 + N1 + (Dwell + Music + Viz + Squeeze)^2 + 
-                              B1*(Dwell + Music + Viz + Squeeze)+
-                              B2*(Dwell + Music + Viz + Squeeze))
-#trt.effects <- trt.design %*% param.df$Coefficient
+working.model.formula <- "Obsij ~ (1|ID) + (Dwell + Music + Viz + Squeeze)^2"
+gee.model.formula <- formula(Obsij ~ 1 + (Dwell + Music + Viz + Squeeze)^2)
 
 # Noise parameters
 # Standard deviation for the random intercepts
-sigma.intercept <- 1.4
+sigma.intercept <- 1
 
 # Standard deviation of the within-subject (residual) variance component
-sigma.noise <- 1.4
+sigma.noise <- 1
 
 # Ordinal cutpoints
 ordinal.breaks <- c(-Inf, 0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, Inf)
@@ -130,9 +119,6 @@ ordinal.breaks <- c(-Inf, 0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, Inf)
 #### Hypothesis Test Setup
 #################################################
 if(test.hypotheses.flag == TRUE){
-  # Create the contrast matrix for the hypothesis tests
-  # Note: not actually a contrast matrix
-  # Each row is tested separately, not a joint hypothesis
   GenTreatmentIndicators <- function(study.data){
     # Generate treatment indicators - 1 if a treatment was received (either by itself or in combination) 0 else
     
@@ -143,11 +129,19 @@ if(test.hypotheses.flag == TRUE){
     return(treat.indicators)
     
   }
-  temp.study <- tibble(Treatment = rep(1:11, 2), B1 = c(rep(0,11), rep(1,11)), N1 = 1)
+  # Create the contrast matrix for the hypothesis tests
+  # Note: not actually a contrast matrix
+  # Each row is tested separately, not a joint hypothesis
+  temp.study <- tibble(Treatment = 1:11)
   temp.study <- bind_cols(temp.study, GenTreatmentIndicators(temp.study))
   treat.mat <- model.frame(true.model.formula, data = temp.study)
-  contrast.mat <- model.matrix(true.model.formula, treat.mat)[2:11,]
-  contrast.mat[,1:2] <- 0
+  contrast.mat <- model.matrix(true.model.formula, treat.mat)[-1,]
+  contrast.mat[,1] <- 0
+  
+  # alternative contrasts - test every coefficient except intercept
+  #contrast.mat <- diag(11)
+  #contrast.mat <- contrast.mat[2:11,]
+  
   rm(temp.study, treat.mat)
 }
 
@@ -155,11 +149,9 @@ if(test.hypotheses.flag == TRUE){
 #### Treatment Assignment Table Setup
 #################################################
 
+trt.table.cols <- 11
+table.call <- expr(table(current.study.data$Treatment))
 
-# Function used to create a vector with the treatment assignments of interest
-# 
-table.call <- expr(c(ftable(Treatment ~ B1+B2, data = current.study.data)))
-trt.table.cols <- 44
 
 #################################################
 #### Out of Sample Comparisons

@@ -1,0 +1,85 @@
+---
+title: "PCORI APDTO Simulation Summary"
+author: "John Sperger"
+date: "9/1/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(xtable)
+```
+
+```{r no_subgroups}
+#################################################
+#### No Subgroups
+#################################################
+fr.pvals <- read.csv("./Final-Results/nsg-fr-2019-08-24 23_40_12/unadjusted-gee-pvals.csv")
+ts.pvals <- read.csv("./Final-Results/nsg-ts-2019-08-25 10_54_01/unadjusted-gee-pvals.csv")
+ts.pvals2 <- read.csv("./Final-Results/nsg-ts-2019-08-25 22_36_06/unadjusted-gee-pvals.csv")
+ts.pvals <- rbind(ts.pvals, ts.pvals2)
+rm(ts.pvals2)
+
+nsg.ts.percentbest.df <- read.csv("./Final-Results/nsg-ts-2019-08-25 22_36_06/percentage-best-treatment.csv",
+                                  col.names = c("Simulation", "PercentBest"))
+nsg.ts.percentbest <- mean(nsg.ts.percentbest.df$PercentBest)
+
+nsg.summary.tbl <- tibble(Scenario = rep("No Subgroups", 2), Method = c("Fixed", "Adaptive"),
+                               Power = c(sum(fr.pvals$V1 < .005)/nrow(fr.pvals), 
+                                         sum(ts.pvals$V1 < .005)/nrow(ts.pvals)),
+                              PercentBest = c(1/11, nsg.ts.percentbest))
+```
+
+```{r subgroup_scenarios}
+#################################################
+#### Subgroups
+#################################################
+sg1.fr.oracle <- read.csv("./Final-Results/sg1-fr-2019-08-26 18_59_00/perc-oracle.csv")
+sg1.fr.oracle$Method <- "Fixed"
+sg1.fr.oracle$Scenario <- 1
+sg1.fr.pb <- read.csv("./Final-Results/sg1-fr-2019-08-26 18_59_00/percentage-best-treatment.csv",
+                      col.names = c("Simulation", "PercentBest"))
+
+sg1.ts.oracle <- read.csv("./Final-Results/sg1-ts-2019-08-26 11_52_08/perc-oracle.csv")
+sg1.ts.oracle$Method <- "Adaptive"
+sg1.ts.oracle$Scenario <- 1
+sg1.ts.pb <- read.csv("./Final-Results/sg1-ts-2019-08-26 11_52_08/percentage-best-treatment.csv",
+                      col.names = c("Simulation", "PercentBest"))
+
+
+sg3.fr.oracle <- read.csv("./Final-Results/sg3-fr-2019-08-23 11_44_47/perc-oracle.csv")
+sg3.fr.oracle$Method <- "Fixed"
+sg3.fr.oracle$Scenario <- 2
+sg3.fr.pb <- read.csv("./Final-Results/sg3-fr-2019-08-23 11_44_47/percentage-best-treatment.csv",
+                      col.names = c("Simulation", "PercentBest"))
+
+sg3.ts.oracle <- read.csv("./Final-Results/sg3-ts-2019-08-22 23_46_37/perc-oracle.csv")
+sg3.ts.oracle$Method <- "Adaptive"
+sg3.ts.oracle$Scenario <- 2
+sg3.ts.pb <- read.csv("./Final-Results/sg3-ts-2019-08-22 23_46_37/percentage-best-treatment.csv",
+                      col.names = c("Simulation", "PercentBest"))
+
+
+subgroup.oracle <- rbind(sg1.fr.oracle, sg1.ts.oracle,
+                         sg3.fr.oracle, sg3.ts.oracle)
+oracle.summary <- subgroup.oracle %>% 
+  group_by(Scenario, Method) %>% 
+  summarise(Power = sum(PercOracleORD >= .98)/length(PercOracleORD))
+
+oracle.summary$PercentBest <- c(mean(sg1.ts.pb$PercentBest),
+                                mean(sg1.fr.pb$PercentBest),
+                                mean(sg3.ts.pb$PercentBest),
+                                mean(sg3.fr.pb$PercentBest))
+oracle.summary$Scenario <- as.character(oracle.summary$Scenario)
+results.summary <- bind_rows(nsg.summary.tbl, oracle.summary)
+# Reordering so that it's fixed then adaptive not adaptive then fixed
+results.summary <- results.summary[c(1,2,4,3,6,5),]
+```
+
+## Results summary
+
+```{r res_summary, results = 'asis'}
+print(xtable(results.summary, digits = 3, caption = "Simulation Results Summary"), 
+      include.rownames=FALSE)
+```

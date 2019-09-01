@@ -242,7 +242,6 @@ GenOutcomes <- function(study.data, true.model.formula, true.params, oos.flag = 
                           Ui = rnorm(n = length(unique(study.data$ID)), mean = 0, sd = 1.4))
     study.data <- inner_join(study.data, random.ints, by = "ID")
     study.data$Normij <- study.data$TEij + study.data$Ui
-    #study.data$Normij <- study.data$TEij
     study.data$Obsij <- cut(study.data$Normij, breaks = ordinal.breaks, labels=FALSE) -1
     return(study.data)
   }

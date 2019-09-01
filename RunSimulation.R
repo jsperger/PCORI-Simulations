@@ -1,7 +1,7 @@
 #################################################
 #### Run a simulation
 #################################################
-settings.path <- "./Settings/sim_settings_sg2.R"
+settings.path <- "./Settings/sim_settings_sg1.R"
 # load settings
 source(settings.path)
 source("./GenerateStudyData.R")
@@ -21,10 +21,18 @@ if(test.hypotheses.flag == TRUE){
   
 }
 
-treatment.assignments <- matrix(nrow = sim.reps, ncol = trt.table.cols)
-percentage.best.treatment <- vector(length = sim.reps)
-percentage.of.oracle.value <- matrix(nrow = sim.reps, ncol = 5)
-colnames(percentage.of.oracle.value) <- c("PercOracleORD", "MSE-Norm", "MSE-SoC", "PerImpOverTO", "MissclassPerc")
+if(calc.percentage.best.treat.flag == TRUE){
+  # Create the empty vectors for holding treatment assignments from each simulation rep
+  treatment.assignments <- matrix(nrow = sim.reps, ncol = trt.table.cols)
+  percentage.best.treatment <- vector(length = sim.reps)
+}
+
+if(calc.oos.metrics.flag == TRUE){
+  # Create the empty matrix for the results summaries for each simulation rep
+  percentage.of.oracle.value <- matrix(nrow = sim.reps, ncol = 5)
+  colnames(percentage.of.oracle.value) <- c("PercOracleORD", "MSE-Norm", "MSE-SoC", "PerImpOverTO", "MissclassPerc")
+}
+
 start.time <- Sys.time()
 
 #################################################
@@ -39,20 +47,30 @@ for(i in 1:sim.reps){
                                           k.unif=k.unif, k.norm=k.norm,
                                           k.bin=k.bin, bin.props=bin.props,
                                           true.model.formula = true.model.formula, true.params, working.model.formula)
-# Generate out of sample data for evaluating model performance
-  oos.data <- GenerateOOSData(Noos = Noos, k.unif, k.norm, k.bin, bin.props,
-                              true.model.formula, true.params)
   gee.mod <- FitGEEModel(current.study.data, model.form = gee.model.formula)
-  # Fit a treatment indicators only model for comparison
-  trt.only.mod <- FitGEEModel(current.study.data, 
-                              model.form = formula(Obsij ~ (Dwell + Music + Viz + Squeeze)^2))
-  percentage.of.oracle.value[i,] <- CalcOOSValue(oos.data, working.model= gee.mod, 
-                                                 trt.only.model= trt.only.mod,
-                                                 model.formula = gee.model.formula)
-  percentage.best.treatment[i] <- CalcISBestTreatment(current.study.data,
-                                                      true.model.formula,
-                                                      true.params)
-  treatment.assignments[i,] <- eval(table.call)
+  
+  if(calc.oos.metrics.flag == TRUE){
+    # Generate out of sample data for evaluating model performance
+    oos.data <- GenerateOOSData(Noos = Noos, k.unif, k.norm, k.bin, bin.props,
+                                true.model.formula, true.params)
+    # Fit a treatment indicators only model for comparison
+    trt.only.mod <- FitGEEModel(current.study.data, 
+                                model.form = formula(Obsij ~ (Dwell + Music + Viz + Squeeze)^2))
+    percentage.of.oracle.value[i,] <- CalcOOSValue(oos.data, working.model= gee.mod, 
+                                                   trt.only.model= trt.only.mod,
+                                                   model.formula = gee.model.formula)
+  }
+  
+
+  
+  if(calc.percentage.best.treat.flag == TRUE){
+    # Calculate the proportion of patients in sample who receieved the best treatment for them 
+    percentage.best.treatment[i] <- CalcISBestTreatment(current.study.data,
+                                                        true.model.formula,
+                                                        true.params)
+    treatment.assignments[i,] <- eval(table.call)
+  }
+
   # Different setups have different assignments of interest
   # With subtypes we're interested in the allocation by important subtype
   if(test.hypotheses.flag == TRUE){
@@ -61,10 +79,6 @@ for(i in 1:sim.reps){
     
   }
 }
-
-#Bonferroni correction
-#adjusted.mm.pvals <- mixed.model.pvals.unadj*10
-#adjusted.gee.pvals <- gee.pvals.unadj*10
 
 end.time <- Sys.time()
 #################################################

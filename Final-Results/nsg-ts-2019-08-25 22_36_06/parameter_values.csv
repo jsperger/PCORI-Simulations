@@ -1,0 +1,12 @@
+"Parameter","Coefficient"
+"(Intercept)",3.5
+"Dwell",-0.4
+"Music",-1.2
+"Viz",-0.8
+"Squeeze",-0.9
+"Dwell:Music",0.2
+"Dwell:Viz",0.2
+"Dwell:Squeeze",0.2
+"Music:Viz",0.5
+"Music:Squeeze",0.5
+"Viz:Squeeze",0.5

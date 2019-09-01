@@ -9,15 +9,27 @@ save.data.files <- FALSE
 # Save final simulation result summaries - includes pvals, treatment allocation summary, and settings files
 
 save.results <- TRUE
-seed <- 20
+seed <- 21
 
 # Number of simulation runs
-sim.reps <- 100
+sim.reps <- 1000
 
 # Used as part of the name for creating the results directory
 # Directory is Run-type Date Time
-settings.type <- "sg1-ts"
+settings.type <- "sg1-fr"
 
+# Whether hypothesis tests should be conducted
+# Should only be set to TRUE if there are no subgroups
+test.hypotheses.flag <- FALSE
+
+# Whether percentage of oracle value and other out of sample comparison metrics should be calculated
+# Should be set to TRUE when there are subgroups
+calc.oos.metrics.flag <- TRUE
+
+# Whether the percentage of patients in-sample who received the best treatment 
+# for them should be calculated
+# 
+calc.percentage.best.treat.flag <- TRUE
 
 #################################################
 #### Study Design Settings
@@ -61,7 +73,7 @@ bin.props <- c(.25, .5)
 #################################################
 # Random Assignment method
 # Options: "simple", "block", "trajectory", "ttts"
-randomization.method <- "ttts"
+randomization.method <- "trajectory"
 # Set the block size when use block randomization
 block.size <-4
 # Flag that determines whether subjects who will have four visits will be randomized separately
@@ -112,7 +124,6 @@ ordinal.breaks <- c(-Inf, 0, 1, 2, 3, 4, 5, 6, 7, 7.5, 8, Inf)
 #################################################
 #### Hypothesis Test Setup
 #################################################
-test.hypotheses.flag <- FALSE
 if(test.hypotheses.flag == TRUE){
 # Create the contrast matrix for the hypothesis tests
 # Note: not actually a contrast matrix
