@@ -1,0 +1,5 @@
+"Parameter","Coefficient"
+"(Intercept)",0
+"Dwell",-0.125
+"Music",-0.255
+"Dwell:Music",0.125
