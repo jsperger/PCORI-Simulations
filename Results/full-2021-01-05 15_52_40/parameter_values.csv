@@ -1,9 +1,0 @@
-"Parameter","Coefficient"
-"(Intercept)",0
-"Dwell",-0.12
-"Music",-0.25
-"Dwell:Music",0.12
-"Dwell:B1",0.12
-"Music:B1",0.4
-"Music:FirstCysto",-0.17
-"FirstCysto",0.4
