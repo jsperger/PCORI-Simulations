@@ -1,0 +1,68 @@
+#+TITLE: 2025 Cystoscopy Sample Size
+#+AUTHOR: John Sperger
+#+email: jsperger@live.unc.edu
+#+BABEL: :session *R* :cache yes :results output graphics :exports both :tangle yes
+-----
+#+name: libs and data
+#+begin_src R
+library(readr)
+library(dplyr)
+library(purrr)
+library(fabricatr)
+library(DeclareDesign)
+
+demo_by_site <- readr::read_csv("data/anon_demo.csv")
+sex_indication_by_site <- readr::read_csv("data/anon_sex.csv") |>
+  dplyr::mutate(Weight = Count/sum(Count))
+#+end_src
+
+#+RESULTS: libs and data
+| B | Bladder Cancer       | Male   |  378 |    0.035924729138947 |
+| C | Bladder Cancer       | Male   | 1122 |    0.106633719825128 |
+| D | Bladder Cancer       | Male   |  432 |   0.0410568333016537 |
+| E | Bladder Cancer       | Male   |  171 |   0.0162516631819046 |
+| F | Bladder Cancer       | Male   |  252 |   0.0239498194259646 |
+| G | Bladder Cancer       | Male   |  261 |   0.0248051701197491 |
+| A | Hematuria            | Male   |  268 |   0.0254704428815814 |
+| B | Hematuria            | Male   |  253 |   0.0240448583919407 |
+| D | Hematuria            | Male   |  172 |   0.0163467021478806 |
+| E | Hematuria            | Male   |   58 |  0.00551226002661091 |
+| F | Hematuria            | Male   |  123 |   0.0116897928150542 |
+| G | Hematuria            | Male   |  127 |   0.0120699486789584 |
+| A | Anatomic abnormality | Male   |  305 |   0.0289868846226953 |
+| B | Anatomic abnormality | Male   |  267 |   0.0253754039156054 |
+| D | Anatomic abnormality | Male   |  175 |   0.0166318190458088 |
+| E | Anatomic abnormality | Male   |   78 |  0.00741303934613191 |
+| F | Anatomic abnormality | Male   |   84 |  0.00798327314198822 |
+| G | Anatomic abnormality | Male   |   87 |  0.00826839003991637 |
+| A | Ineligible           | Male   |  567 |   0.0538870937084205 |
+| B | Ineligible           | Male   |  942 |   0.0895267059494393 |
+| D | Ineligible           | Male   |  583 |   0.0554077171640373 |
+| E | Ineligible           | Male   |  206 |   0.0195780269910663 |
+| F | Ineligible           | Male   |  393 |   0.0373503136285877 |
+| G | Ineligible           | Male   |  407 |   0.0386808591522524 |
+| A | Bladder Cancer       | Female |  125 |   0.0118798707470063 |
+| B | Bladder Cancer       | Female |  354 |   0.0336437939555218 |
+| D | Bladder Cancer       | Female |  118 |   0.0112145979851739 |
+| E | Bladder Cancer       | Female |   77 |  0.00731800038015586 |
+| F | Bladder Cancer       | Female |    4 | 0.000380155863904201 |
+| G | Bladder Cancer       | Female |    4 | 0.000380155863904201 |
+| A | Hematuria            | Female |  198 |   0.0188177152632579 |
+| B | Hematuria            | Female |  168 |   0.0159665462839764 |
+| D | Hematuria            | Female |   98 |  0.00931381866565292 |
+| E | Hematuria            | Female |   64 |  0.00608249382246721 |
+| F | Hematuria            | Female |    3 | 0.000285116897928151 |
+| G | Hematuria            | Female |    3 | 0.000285116897928151 |
+| A | Anatomic abnormality | Female |   10 | 0.000950389659760502 |
+| B | Anatomic abnormality | Female |    9 | 0.000855350693784452 |
+| D | Anatomic abnormality | Female |    5 | 0.000475194829880251 |
+| E | Anatomic abnormality | Female |    3 | 0.000285116897928151 |
+| F | Anatomic abnormality | Female |    0 |                    0 |
+| G | Anatomic abnormality | Female |    0 |                    0 |
+| A | Ineligible           | Female |  505 |   0.0479946778179053 |
+| B | Ineligible           | Female |  576 |   0.0547424444022049 |
+| D | Ineligible           | Female |  283 |   0.0268960273712222 |
+| E | Ineligible           | Female |  184 |   0.0174871697395932 |
+| F | Ineligible           | Female |   10 | 0.000950389659760502 |
+| G | Ineligible           | Female |   10 | 0.000950389659760502 |
+
