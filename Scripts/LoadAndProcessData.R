@@ -42,3 +42,21 @@ print(head(sex_indication_props_by_site))
 
 print("Site Proportions:")
 print(head(site_props))
+
+# Define and normalize outcome distributions
+# These represent probabilities for an ordinal outcome with 11 categories (e.g., 0 to 10)
+outcome_dist_scenario1_raw <- c(0.30, 0.09, 0.33, 0.06, 0.11, 0.03, 0.04, 0.02, 0.03, 0.01, 0.0)
+outcome_dist_scenario2_raw <- c(0.115, 0.180, 0.220, 0.230, 0.150, 0.065, 0.018, 0.007, 0.005, 0.005, 0.005)
+
+# Normalize them to ensure they sum to 1
+outcome_dist_scenario1 <- outcome_dist_scenario1_raw / sum(outcome_dist_scenario1_raw)
+outcome_dist_scenario2 <- outcome_dist_scenario2_raw / sum(outcome_dist_scenario2_raw)
+
+# Optional: Print to verify (can be commented out in final script for cleaner sourcing)
+# print("Normalized Outcome Distribution - Scenario 1 (scores 0-10):")
+# print(setNames(outcome_dist_scenario1, 0:10))
+# print(paste("Sum Scenario 1:", sum(outcome_dist_scenario1)))
+#
+# print("Normalized Outcome Distribution - Scenario 2 (scores 0-10):")
+# print(setNames(outcome_dist_scenario2, 0:10))
+# print(paste("Sum Scenario 2:", sum(outcome_dist_scenario2)))
