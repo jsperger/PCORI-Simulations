@@ -11,7 +11,7 @@ require(tidyverse)
 sim.seed <- 2914
 
 # Number of simulation runs
-sim.reps <- 2000
+sim.reps <- 1 # Reduced for testing
 
 # Used as part of the name for creating the results directory
 # Directory is Run-type Date Time
@@ -22,18 +22,24 @@ settings.type <- "full"
 save.results <- TRUE
 # Save intermediate simulation run data files
 # If true, saves the data for each simulation into a CSV
-save.sim.study.data <- FALSE
+save.sim.study.data <- TRUE # Enabled for testing
 
 # Is the scenario a null scenario?
 # If true, then the FWER is computed
 null.scenario <- FALSE
+
+# Number of clusters for heterogeneity
+n_clusters <- 2
+
+# Proportion of participants in each cluster
+cluster_proportions <- c(0.5, 0.5)
 
 #################################################
 #### Study Design Settings
 #################################################
 
 # Total sample size
-N <- 2900
+N <- 100 # Reduced for testing
 
 # Visit proportions
 # 1 Visit, 2 visits, 3 visits, 4 visits
@@ -75,10 +81,11 @@ arm.var.name <- "Arm"
 #################################################
 #### Treatment Effect Model Settings
 #################################################
-# Treatment effects
-param.df <- read.csv("./Settings/full.csv")
-true.params <- param.df$Coefficient
-names(true.params) <- param.df$Parameter
+# Default treatment effects, used if cluster-specific files are not found or for fallback.
+# Cluster-specific parameters will be loaded from Settings/clusterX_params.csv
+default_param.df <- read.csv("./Settings/full.csv")
+true.params <- default_param.df$Coefficient
+names(true.params) <- default_param.df$Parameter
 
 treatment.arm.map <- expand_grid(Dwell = c(0, 1),
                                  Music = c(0, 1)) %>% 

@@ -1,0 +1,15 @@
+Parameter,Value
+(Intercept),0
+Dwell,-0.15
+Music,-0.28
+Dwell:Music,0.10
+Dwell:B1,0.12
+Music:B1,0.4
+Music:FirstCysto,-0.17
+FirstCysto,0.4
+bin.prop.B1,0.35
+bin.prop.B2,0.4
+mean.U1,0
+sd.U1,0.577
+mean.N1,0
+sd.N1,1
