@@ -1,0 +1,49 @@
+Site,Indication,Sex,Count
+B,Bladder Cancer,Male,378
+C,Bladder Cancer,Male,1122
+D,Bladder Cancer,Male,432
+E,Bladder Cancer,Male,171
+F,Bladder Cancer,Male,252
+G,Bladder Cancer,Male,261
+A,Hematuria,Male,268
+B,Hematuria,Male,253
+D,Hematuria,Male,172
+E,Hematuria,Male,58
+F,Hematuria,Male,123
+G,Hematuria,Male,127
+A,Anatomic abnormality,Male,305
+B,Anatomic abnormality,Male,267
+D,Anatomic abnormality,Male,175
+E,Anatomic abnormality,Male,78
+F,Anatomic abnormality,Male,84
+G,Anatomic abnormality,Male,87
+A,Ineligible,Male,567
+B,Ineligible,Male,942
+D,Ineligible,Male,583
+E,Ineligible,Male,206
+F,Ineligible,Male,393
+G,Ineligible,Male,407
+A,Bladder Cancer,Female,125
+B,Bladder Cancer,Female,354
+D,Bladder Cancer,Female,118
+E,Bladder Cancer,Female,77
+F,Bladder Cancer,Female,4
+G,Bladder Cancer,Female,4
+A,Hematuria,Female,198
+B,Hematuria,Female,168
+D,Hematuria,Female,98
+E,Hematuria,Female,64
+F,Hematuria,Female,3
+G,Hematuria,Female,3
+A,Anatomic abnormality,Female,10
+B,Anatomic abnormality,Female,9
+D,Anatomic abnormality,Female,5
+E,Anatomic abnormality,Female,3
+F,Anatomic abnormality,Female,0
+G,Anatomic abnormality,Female,0
+A,Ineligible,Female,505
+B,Ineligible,Female,576
+D,Ineligible,Female,283
+E,Ineligible,Female,184
+F,Ineligible,Female,10
+G,Ineligible,Female,10

@@ -1,0 +1,43 @@
+Site,Variable,Count
+A,White,989
+A,Hispanic,51
+A,African American,198
+A,Asian,26
+A,AI/AN,6
+A,Pacific Islander/Other/Unknown,66
+B,White,1562
+B,Hispanic,176
+B,African American,178
+B,Asian,78
+B,AI/AN,11
+B,Pacific Islander/Other/Unknown,343
+C,White,675
+C,Hispanic,14
+C,African American,259
+C,Asian,15
+C,AI/AN,3
+C,Pacific Islander/Other/Unknown,48
+D,White,350
+D,Hispanic,18
+D,African American,69
+D,Asian,5
+D,AI/AN,2
+D,Pacific Islander/Other/Unknown,25
+E,White,405
+E,Hispanic,5
+E,African American,37
+E,Asian,5
+E,AI/AN,0
+E,Pacific Islander/Other/Unknown,19
+F,White,405
+F,Hispanic,5
+F,African American,58
+F,Asian,5
+F,AI/AN,0
+F,Pacific Islander/Other/Unknown,14
+G,White,223
+G,Hispanic,2
+G,African American,2
+G,Asian,2
+G,AI/AN,0
+G,Pacific Islander/Other/Unknown,7
